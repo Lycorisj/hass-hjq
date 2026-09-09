@@ -1,0 +1,88 @@
+{
+  "tested_at": "2026-09-09",
+  "homekit_layers": {
+    "hap_live": "supported by HA HomeKit Bridge + this integration H.264 HLS",
+    "hap_motion_or_doorbell_event": "supported by Bridge linked_* sensors; this integration has no entities yet",
+    "hksv": "not supported by HA HomeKit Bridge; do not implement HAP Recording in this repo"
+  },
+  "features": [
+    {
+      "id": "motion_notification",
+      "home_app_name": "检测到移动",
+      "status": "unsupported_here_but_feasible",
+      "needs_hksv": false,
+      "feasibility": "high",
+      "effort": "medium",
+      "cloud_today": "functionId 9 motion detect on; unread_alarm_count present",
+      "recommended": "Reverse alarm list or push, expose binary_sensor motion, set linked_motion_sensor on the camera accessory",
+      "not_recommended": "Local ffmpeg scene-detect on 2304x1296 HEVC"
+    },
+    {
+      "id": "activity_zones",
+      "home_app_name": "活动区域",
+      "status": "unsupported",
+      "needs_hksv": true,
+      "feasibility": "high_via_scrypted_hksv_or_medium_ha_only_cloud_zones",
+      "effort": "medium_for_cloud_api_or_deploy_scrypted",
+      "cloud_today": "functionId 49 region settings on; API not wired",
+      "recommended": "For Home app zones use Scrypted HKSV. For HA-only filtering reverse the cloud region API and keep using motion binary_sensor",
+      "home_app_cannot_see_cloud_zones": true
+    },
+    {
+      "id": "face_recognition",
+      "home_app_name": "人物 / 认识的人",
+      "status": "unsupported",
+      "needs_hksv": true,
+      "feasibility": "high_via_scrypted_hksv_only",
+      "effort": "deploy_only_if_hksv_exists",
+      "cloud_today": "functionConfig has no face item",
+      "recommended": "Do not train faces in this integration. Home app people require a home hub + iCloud+ + HKSV",
+      "local_frigate_does_not_fill_home_app_people": true
+    },
+    {
+      "id": "hksv_recording",
+      "home_app_name": "活动历史 / iCloud 片段",
+      "status": "unsupported",
+      "needs_hksv": true,
+      "feasibility": "high_via_scrypted_not_in_repo",
+      "effort": "large_if_in_tree_hap_recording",
+      "hap_services": [
+        "CameraRecordingManagement",
+        "CameraOperatingMode",
+        "DataStreamTransportManagement"
+      ],
+      "recommended": "Publish transcoded H.264 as RTSP or HTTP HLS for Scrypted; do not dual-export the same camera to HA Bridge and Scrypted HomeKit",
+      "gap_today": "transcode playlist lives at /tmp/hass_hjq/{mac}/index.m3u8 inside HA, not a network URL"
+    },
+    {
+      "id": "doorbell_talkback",
+      "home_app_name": "门铃 / 对讲",
+      "status": "unsupported",
+      "needs_hksv": false,
+      "feasibility": "low_for_home_app_talk_medium_for_ha_buttons",
+      "effort": "large_for_bidirectional_hap_audio_plus_vendor_talk_channel",
+      "cloud_today": "functionId 14 talkback on; not a doorbell button",
+      "recommended": "Enable support_audio for listen-only. Do not map motion to linked_doorbell_sensor. Vendor talkback stays HA-only if reversed later"
+    },
+    {
+      "id": "ptz",
+      "home_app_name": "云台",
+      "status": "unsupported",
+      "needs_hksv": false,
+      "feasibility": "medium_in_ha_low_in_home_app",
+      "effort": "medium",
+      "cloud_today": "functionId 1 ptz on; ptz_support true",
+      "recommended": "HA buttons/numbers after reversing PTZ API. HAP has no consumer IP-camera PTZ service"
+    },
+    {
+      "id": "sound_detect",
+      "home_app_name": "声音侦测",
+      "status": "unsupported",
+      "needs_hksv": false,
+      "feasibility": "medium",
+      "effort": "same_as_motion_if_alarm_type_exists",
+      "cloud_today": "functionId 36 sound detect on; functionId 4 cry detect off",
+      "recommended": "Separate binary_sensor sound for HA automations; Home app camera accessory has no standard sound characteristic"
+    }
+  ]
+}

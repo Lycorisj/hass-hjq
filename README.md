@@ -68,7 +68,7 @@ Apple 家庭 App 里的连续录像是 **HomeKit Secure Video**，依赖家庭�
 
 本集成提供的录制是 Home Assistant 本地 MP4（上面的录制开关 / `camera.record`）。家庭 App 可以实时看，回放请在 Home Assistant 媒体目录里看。
 
-如果一定要 HKSV，需要另外用 Scrypted 等方案，并把本集成转码后的 H.264 流作为输入。
+如果一定要 HKSV（家庭 App 时间轴、人脸、活动区域），需要另外用 Scrypted 等方案，并把本集成转码后的 H.264 流作为输入。各不支持项的可行性、抓包步骤和推荐/不推荐做法见 [docs/HOMEKIT_UNSUPPORTED.md](docs/HOMEKIT_UNSUPPORTED.md)。
 
 ## 集成选项
 

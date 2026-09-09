@@ -21,6 +21,8 @@
 | [artifacts/entity-attributes.example.json](artifacts/entity-attributes.example.json) | 摄像头实体上的规格属性 |
 | [artifacts/function-config.redacted.json](artifacts/function-config.redacted.json) | App `functionConfig`（无人脸项） |
 | [artifacts/homekit-hap.redacted.json](artifacts/homekit-hap.redacted.json) | HomeKit Bridge 实测与能力边界 |
+| [artifacts/homekit-unsupported-feasibility.json](artifacts/homekit-unsupported-feasibility.json) | 不支持项的可行性评级与推荐路线 |
+| [HOMEKIT_UNSUPPORTED.md](HOMEKIT_UNSUPPORTED.md) | 不支持项的详细方案（运动/区域/人脸/HKSV/对讲/云台） |
 | [artifacts/ha-device-page.png](artifacts/ha-device-page.png) | HA 设备页：Streaming + Recording 开关（无实况画面） |
 
 ---
@@ -131,57 +133,35 @@ homekit:
 
 ## 5. 不支持项：开发可行性
 
-### 5.1 动作感应器（可行，工作量中等）
+详细方案、接口抓包步骤、YAML 和明确不做的事项见 [HOMEKIT_UNSUPPORTED.md](HOMEKIT_UNSUPPORTED.md)。这里只保留对照。
 
-**目标**：HA 里每路一个 `binary_sensor.*_motion`，HomeKit 用 `linked_motion_sensor` 做家庭通知。这 **不需要 HKSV**。
+家庭 App 摄像头是三层，不要混在一块做：
 
-云端已经打开「移动侦测」，设备列表里有 `unread_alarm_count`。缺的是事件通道。
-
-大致方案：
-
-1. 抓包移动爱家 App / 网页版，找告警列表或推送（候选：`video.komect.com` 告警查询、WebSocket、长轮询）。
-2. 用 `DataUpdateCoordinator` 每 5–15s 拉未读告警，或订阅推送。
-3. 新增 `binary_sensor`（`device_class=motion`），有告警时 on，超时后 off。
-4. 在 README 里写明 HomeKit `linked_motion_sensor` 的 YAML。
-
-风险：合家亲共享设备的告警接口可能和主人账号不同；无官方文档，要逆向。不碰人脸、不碰 iCloud。
-
-**不建议**在 HA 里对 2304×1296 HEVC 做本地运动检测：两路实时解码 CPU 很高，且和摄像机自己的侦测重复。
-
-### 5.2 活动区域（两条路，难度差很多）
-
-| 路线 | 效果 | 可行性 |
+| 层 | HA HomeKit Bridge | 本集成现状 |
 | --- | --- | --- |
-| A. 把云端「区域设置」接到 HA | 在 HA 里画/开关区域，真正过滤的是摄像机/云端 | 中。要逆向区域读写 API，再做成 `image`/`switch` 或自定义面板。家庭 App **看不到**这些区域 |
-| B. 家庭 App 里的活动区域 | 苹果 HKSV 在中枢上画区域 | 依赖 HKSV，见 5.4。做完 HKSV 后区域是苹果 UI，不用我们实现 |
+| HAP 实时预览 | 支持 | 已提供 H.264 HLS |
+| HAP 运动/门铃事件 | 支持 `linked_motion_sensor` / `linked_doorbell_sensor` | **还没有**对应实体 |
+| HKSV（时间轴、人脸、活动区域、iCloud） | **官方不支持** | 不要在本仓库实现 HAP Recording |
 
-若只要「某块区域动了再通知」，优先 5.1 + 路线 A（让云端按区域报警，HA 只收事件）。
+| 功能 | 可行性 | 推荐做法 | 不建议 |
+| --- | --- | --- | --- |
+| **移动通知** | **高**，中等工作量，**不需要 HKSV** | 抓包告警 → `binary_sensor.*_motion` → `linked_motion_sensor` | 对 2304p HEVC 做本地运动检测 |
+| **活动区域** | 家庭 App：**只能走 HKSV**；HA 自己用云端框：中等 | 要在家庭 App 画框 → Scrypted HKSV。只要过滤告警 → 接云端「区域设置」API，家庭 App 看不见 | 以为接到 HA 后家庭 App 会出区域 UI |
+| **人脸 / 认识的人** | 仅 HKSV + 家庭中枢 + iCloud+ | Scrypted 开录制后由苹果中枢做人脸 | 本集成做人脸模型；Frigate 填不满家庭 App 人物库。B33 `functionConfig` 也无人脸项 |
+| **录制 / 活动历史** | 旁路 **高**；写进本仓库 **很大** | 把 H.264 再以 RTSP/HTTP 给 Scrypted；同一路不要既 Bridge 又 Scrypted HomeKit。当前 HLS 在容器 `/tmp`，Scrypted 默认够不到 | 自研 `CameraRecordingManagement` + Data Stream |
+| **门铃 / 对讲** | 听声音：**高**（`support_audio`）；对讲：**低**；门铃：硬件不是门铃 | 直播带音频即可。对讲若做也只做 HA `button`，需另抓厂家 talk 通道 | 用运动实体冒充 `linked_doorbell_sensor` |
+| **云台** | HA：**中**；家庭 App：**无标准服务** | 抓包 PTZ → HA `button`/`number` | 在家庭 App 里堆方向开关 |
 
-### 5.3 人脸识别（不建议自研 HKSV 人脸）
+两条总路：
 
-- **家庭 App 人脸**：HKSV 功能，分析在 HomePod/Apple TV，人物库在 iCloud。HA Bridge 不做。
-- **云端人脸**：当前 B33 能力列表无此项；即使有，也要单独 API，且不能变成苹果「认识的人」。
-- **HA 本地人脸**：Frigate + 双路 2304p 云端 HEVC，成本高，和 HomeKit 人脸不是同一套。
-
-要在家庭 App 里认人：走 5.4（Scrypted HKSV 或自研 HAP Recording），不要在本集成里做人脸模型。
-
-### 5.4 HomeKit 录制 / HKSV（可行但不应写进本集成核心）
-
-HKSV 需要：家庭中枢、iCloud+、HAP Camera Recording Management（事件触发、片段加密上传中枢）。HA 核心多年明确不做。
-
-| 路线 | 工作量 | 说明 |
-| --- | --- | --- |
-| **推荐：Scrypted / go2rtc HomeKit** | 部署配置，几乎不用改本集成 | 本集成保持稳定 H.264 HLS/RTSP；Scrypted 吃这条流，由它做 HKSV、人脸、活动区域 |
-| 本集成内实现 HAP Recording | 很大（独立 HAP 服务、加密、与中枢联调） | 等于再写一个 Scrypted 子集，维护成本高 |
-| 给 HA 核心提 HKSV PR | 不确定，历史无进展 | 不挡当前直播 |
-
-本仓库定位：HA 直播 + 本地 MP4 + 给 HomeKit Bridge / Scrypted 一条可用的 H.264 流。HKSV 当外部能力。
+- **α 留在 Bridge**：补运动实体，家庭 App 能推「检测到移动」，仍然没有时间轴。
+- **β 旁路 Scrypted HKSV**：本集成只保证 H.264（最好加网络可读 RTSP），时间轴/人脸/区域全部交给中枢。
 
 ---
 
 ## 6. 建议落地顺序
 
 1. 家里 HA 配对家庭 App，确认 720p 实时预览（本 PR 已覆盖服务侧）。
-2. 逆向告警接口 → `binary_sensor` 运动 → HomeKit 通知（5.1）。
-3. 若需要家庭 App 时间轴/人脸/活动区域：同一 H.264 流进 Scrypted，开 HKSV（5.4）。
-4. 云端活动区域 API（5.2A）仅在 App 区域和 HA 自动化要打通时再做。
+2. 逆向告警接口 → `binary_sensor` 运动 → HomeKit 通知（α，见 HOMEKIT_UNSUPPORTED.md §1）。
+3. 若需要家庭 App 时间轴/人脸/活动区域：H.264 出 RTSP/HTTP，进 Scrypted 开 HKSV（β）。同一摄像头不要两套 HomeKit 出口。
+4. 云端活动区域 API、PTZ、对讲只作为 HA 能力，按需再做。

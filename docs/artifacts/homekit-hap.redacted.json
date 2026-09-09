@@ -8,7 +8,8 @@
     "linked_motion_sensor": "supported by HA HomeKit, not wired because this integration has no binary_sensor yet",
     "linked_doorbell_sensor": "supported by HA HomeKit, B33 has talkback not a doorbell button",
     "activity_zones": "Home app zones require HKSV",
-    "face_recognition": "Home app people require HKSV + home hub + iCloud+"
+    "face_recognition": "Home app people require HKSV + home hub + iCloud+",
+    "detail_doc": "docs/HOMEKIT_UNSUPPORTED.md"
   },
   "accessories_observed": [
     {
