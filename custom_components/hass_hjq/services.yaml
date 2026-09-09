@@ -1,0 +1,7 @@
+refresh_stream:
+  name: Refresh live stream
+  description: Fetch a new cloud live address and restart H.264 transcoding if enabled.
+  target:
+    entity:
+      integration: hass_hjq
+      domain: camera

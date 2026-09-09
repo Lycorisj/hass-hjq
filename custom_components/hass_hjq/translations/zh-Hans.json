@@ -2,16 +2,56 @@
     "config": {
         "step": {
             "user": {
+                "title": "移动爱家登录",
+                "description": "请输入移动爱家（原和家亲）账号的手机号和密码。",
                 "data": {
                     "username": "手机号",
                     "password": "密码"
-                },
-                "title": "和家亲登录",
-                "description": "请输入您的和家亲账号信息"
+                }
+            },
+            "reauth_confirm": {
+                "title": "重新登录",
+                "description": "登录已过期，请重新输入密码。",
+                "data": {
+                    "password": "密码"
+                }
             }
         },
         "error": {
-            "invalid_auth": "登录失败，请检查您的账号和密码"
+            "invalid_auth": "登录失败，请检查手机号和密码。若频繁失败可能是账号被风控，请稍后再试。",
+            "unknown": "未知错误",
+            "cannot_connect": "无法连接"
+        },
+        "abort": {
+            "already_configured": "该账号已经添加",
+            "reauth_successful": "重新登录成功"
+        }
+    },
+    "options": {
+        "step": {
+            "init": {
+                "title": "视频流与录制",
+                "description": "HomeKit 实时预览需要将云端 H.265 转码为 H.264，会占用额外 CPU。本地录像保存在 config/www/hass_hjq/。",
+                "data": {
+                    "transcode_h264": "转码为 H.264（HomeKit 实时预览需要）",
+                    "video_scale": "转码分辨率（1280:720 / 1920:1080 / source）",
+                    "support_audio": "包含音频",
+                    "record_segment_seconds": "录像分段时长（秒）"
+                }
+            }
+        }
+    },
+    "entity": {
+        "switch": {
+            "recording": {
+                "name": "录制"
+            }
+        }
+    },
+    "services": {
+        "refresh_stream": {
+            "name": "刷新直播流",
+            "description": "重新获取云端直播地址，并在启用转码时重启 H.264 转码。"
         }
     }
 }
