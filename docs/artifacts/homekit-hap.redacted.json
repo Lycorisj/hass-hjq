@@ -1,0 +1,50 @@
+{
+  "tested_at": "2026-09-09",
+  "environment": "cloud VM + Docker HA, no Apple device on LAN",
+  "ha_homekit_bridge": {
+    "hk_secure_video": false,
+    "official_docs": "HomeKit Bridge does not support HomeKit Secure Video",
+    "live_preview": "supported in accessory mode when camera stream is H.264",
+    "linked_motion_sensor": "supported by HA HomeKit, not wired because this integration has no binary_sensor yet",
+    "linked_doorbell_sensor": "supported by HA HomeKit, B33 has talkback not a doorbell button",
+    "activity_zones": "Home app zones require HKSV",
+    "face_recognition": "Home app people require HKSV + home hub + iCloud+"
+  },
+  "accessories_observed": [
+    {
+      "camera": "视洞摄像头B33-2",
+      "mode": "accessory",
+      "hap_port": 21064,
+      "mdns_type": "_hap._tcp",
+      "category": 17,
+      "paired": false,
+      "local_hls_copy": {
+        "ok": true,
+        "codec": "h264",
+        "profile": "Constrained Baseline",
+        "width": 1280,
+        "height": 720
+      }
+    },
+    {
+      "camera": "视洞摄像头B33-1",
+      "mode": "accessory",
+      "hap_port": 21065,
+      "mdns_type": "_hap._tcp",
+      "category": 17,
+      "paired": false
+    }
+  ],
+  "homekit_yaml_knobs": {
+    "video_codec": "copy (recommended once transcode_h264 is on)",
+    "support_audio": true,
+    "max_width": 1280,
+    "max_height": 720,
+    "max_fps": 15
+  },
+  "why_home_app_not_paired_here": [
+    "cloud VM has no iPhone/iPad on the same L2 network",
+    "HomeKit pairing needs mDNS _hap._tcp and a direct HAP TCP path",
+    "Docker advertised address was 172.30.0.2"
+  ]
+}

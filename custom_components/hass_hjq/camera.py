@@ -85,15 +85,16 @@ class HeJiaQinCamera(CoordinatorEntity[HassHjqCoordinator], Camera):
 
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
-        """Return extra attributes."""
+        """Return extra attributes including live/record encode specs."""
         info = self.worker.dev_info
-        return {
+        attrs: dict[str, Any] = {
             "ip_address": info.get("ip_address") or info.get("ipAddress"),
             "mac_address": info.get("mac_addr") or info.get("macAddr"),
-            "transcoding_h264": self.worker.transcode,
             "h264_ready": self.worker.transcoder.running,
             "recording": self.worker.recording,
         }
+        attrs.update(self.worker.output_specs())
+        return attrs
 
     async def async_added_to_hass(self) -> None:
         """Start keep-alive when the entity is added."""

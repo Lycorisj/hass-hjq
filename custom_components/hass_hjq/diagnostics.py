@@ -34,6 +34,16 @@ async def async_get_config_entry_diagnostics(
                 "transcoder_running": worker.transcoder.running,
                 "recording": worker.recording,
                 "model": worker.dev_info.get("mac_model"),
+                "output_specs": worker.output_specs(),
+                "app_functions": [
+                    {
+                        "id": item.get("functionId"),
+                        "name": item.get("functionName"),
+                        "switch": item.get("switchKey"),
+                    }
+                    for item in (worker.camera.get("functionConfig") or [])
+                    if isinstance(item, dict)
+                ],
             }
         )
     return {

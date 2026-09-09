@@ -14,14 +14,25 @@ from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
 from .const import (
     CONF_AUDIO,
+    CONF_BITRATE,
     CONF_RECORD_SEGMENT,
     CONF_SCALE,
     CONF_TRANSCODE,
     DEFAULT_AUDIO,
+    DEFAULT_BITRATE,
     DEFAULT_RECORD_SEGMENT,
     DEFAULT_SCALE,
     DEFAULT_TRANSCODE,
     KEEPALIVE_INTERVAL,
+    OUTPUT_AUDIO_BITRATE,
+    OUTPUT_AUDIO_CHANNELS,
+    OUTPUT_AUDIO_CODEC,
+    OUTPUT_AUDIO_RATE,
+    OUTPUT_CONTAINER_LIVE,
+    OUTPUT_CONTAINER_RECORD,
+    OUTPUT_VIDEO_CODEC,
+    OUTPUT_VIDEO_LEVEL,
+    OUTPUT_VIDEO_PROFILE,
     STREAM_STALE_SECONDS,
 )
 from .coordinator import HassHjqCoordinator
@@ -60,6 +71,7 @@ class CameraWorker:
             self.mac_id,
             scale=entry.options.get(CONF_SCALE, DEFAULT_SCALE),
             audio=entry.options.get(CONF_AUDIO, DEFAULT_AUDIO),
+            bitrate=entry.options.get(CONF_BITRATE, DEFAULT_BITRATE),
         )
         self.recorder = SegmentRecorder(hass, self.mac_id, self.name)
 
@@ -74,6 +86,30 @@ class CameraWorker:
     def recording(self) -> bool:
         """Return whether local recording is active."""
         return self.recorder.recording
+
+    def output_specs(self) -> dict[str, Any]:
+        """Return the configured live/record encode specs for HA and HomeKit."""
+        audio = bool(self.entry.options.get(CONF_AUDIO, DEFAULT_AUDIO))
+        scale = self.entry.options.get(CONF_SCALE, DEFAULT_SCALE)
+        bitrate = self.entry.options.get(CONF_BITRATE, DEFAULT_BITRATE)
+        return {
+            "transcode_h264": self.transcode,
+            "live_container": OUTPUT_CONTAINER_LIVE if self.transcode else "cloud",
+            "video_codec": OUTPUT_VIDEO_CODEC if self.transcode else "hevc",
+            "video_profile": OUTPUT_VIDEO_PROFILE if self.transcode else "main",
+            "video_level": OUTPUT_VIDEO_LEVEL if self.transcode else None,
+            "video_resolution": scale,
+            "video_bitrate": bitrate if self.transcode else "cloud",
+            "audio_enabled": audio,
+            "audio_codec": OUTPUT_AUDIO_CODEC if audio else None,
+            "audio_rate": OUTPUT_AUDIO_RATE if audio else None,
+            "audio_channels": OUTPUT_AUDIO_CHANNELS if audio else None,
+            "audio_bitrate": OUTPUT_AUDIO_BITRATE if audio else None,
+            "record_container": OUTPUT_CONTAINER_RECORD,
+            "record_segment_seconds": int(
+                self.entry.options.get(CONF_RECORD_SEGMENT, DEFAULT_RECORD_SEGMENT)
+            ),
+        }
 
     @property
     def api(self):

@@ -38,13 +38,23 @@ def _load_module(fullname: str, path: Path):
     return module
 
 
-_stub_homeassistant()
+def _stub_homeassistant_core() -> None:
+    _stub_homeassistant()
+    if "homeassistant.core" in sys.modules:
+        return
+    core = types.ModuleType("homeassistant.core")
+    core.HomeAssistant = type("HomeAssistant", (), {})
+    sys.modules["homeassistant.core"] = core
+
+
+_stub_homeassistant_core()
 pkg = types.ModuleType("hass_hjq")
 pkg.__path__ = [str(PKG_PATH)]
 pkg.__package__ = "hass_hjq"
 sys.modules["hass_hjq"] = pkg
 _load_module("hass_hjq.const", PKG_PATH / "const.py")
 hjqapi = _load_module("hass_hjq.hjqapi", PKG_PATH / "hjqapi.py")
+ffmpeg_tools = _load_module("hass_hjq.ffmpeg_tools", PKG_PATH / "ffmpeg_tools.py")
 HJQApi = hjqapi.HJQApi
 
 
@@ -81,6 +91,15 @@ class SignTest(unittest.TestCase):
         )
         self.assertEqual(first, second)
         self.assertEqual(len(first), 32)
+
+
+class BufsizeTest(unittest.TestCase):
+    def test_bufsize_is_twice_bitrate(self) -> None:
+        self.assertEqual(ffmpeg_tools._bufsize_for("800k"), "1600k")
+        self.assertEqual(ffmpeg_tools._bufsize_for("1500k"), "3000k")
+        self.assertEqual(ffmpeg_tools._bufsize_for("2500k"), "5000k")
+        self.assertEqual(ffmpeg_tools._bufsize_for("2m"), "4M")
+        self.assertEqual(ffmpeg_tools._bufsize_for("weird"), "3000k")
 
 
 if __name__ == "__main__":

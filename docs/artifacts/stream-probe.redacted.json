@@ -1,0 +1,123 @@
+{
+  "account": "redacted",
+  "tested_at": "2026-09-09T10:04:00Z",
+  "environment": {
+    "home_assistant": "ghcr.io/home-assistant/home-assistant:stable (Docker, host network)",
+    "ffmpeg": "system /usr/bin/ffmpeg inside HA container",
+    "integration": "hass_hjq 0.2.0"
+  },
+  "cameras": [
+    {
+      "name": "视洞摄像头B33-2",
+      "model": "B33",
+      "hardware": "IPC_SD_B33_1",
+      "share_type": 1,
+      "person_share": 1,
+      "cloud_live": {
+        "container": "mpegts",
+        "video_codec": "hevc",
+        "video_profile": "Main",
+        "width": 2304,
+        "height": 1296,
+        "fps": "16/1",
+        "pix_fmt": "yuv420p",
+        "audio_codec": "aac",
+        "audio_profile": "LC",
+        "session_timeout_seconds": 60,
+        "url_shape": "https://…/flv/{macId}/{token}.ts?accessKey=… (signed, ~1h expire)"
+      },
+      "ha_live_default": {
+        "transcode": true,
+        "container": "hls",
+        "video_codec": "h264",
+        "video_profile": "Constrained Baseline",
+        "video_level": "3.1",
+        "width": 1280,
+        "height": 720,
+        "video_bitrate": "1500k",
+        "audio_codec": "aac",
+        "audio_rate": 16000,
+        "audio_channels": 1,
+        "snapshot_jpeg": "1280x720, http 200"
+      },
+      "ha_record": {
+        "switch_clip": {
+          "container": "mp4",
+          "video_codec": "h264",
+          "width": 1280,
+          "height": 720,
+          "audio_codec": "aac",
+          "duration_seconds": 50.5
+        },
+        "camera_record_service": {
+          "container": "mp4",
+          "video_codec": "h264",
+          "width": 1280,
+          "height": 720,
+          "audio_codec": "aac",
+          "requested_duration_seconds": 8
+        }
+      },
+      "homekit_service": {
+        "mode": "accessory",
+        "hap_port": 21064,
+        "mdns_type": "_hap._tcp",
+        "category": 17,
+        "paired": false,
+        "h264_copy_from_local_hls": {
+          "ok": true,
+          "codec": "h264",
+          "profile": "Constrained Baseline",
+          "width": 1280,
+          "height": 720
+        }
+      },
+      "app_capabilities_observed": [
+        "ptz",
+        "motion_detect",
+        "sound_detect",
+        "motion_tracking",
+        "activity_region",
+        "talkback",
+        "cloud_storage",
+        "local_record"
+      ]
+    },
+    {
+      "name": "视洞摄像头B33-1",
+      "model": "B33",
+      "hardware": "IPC_SD_B33_1",
+      "share_type": 1,
+      "person_share": 1,
+      "cloud_live": {
+        "container": "mpegts",
+        "video_codec": "hevc",
+        "video_profile": "Main",
+        "width": 2304,
+        "height": 1296,
+        "fps": "15/1",
+        "pix_fmt": "yuv420p",
+        "audio_codec": "aac",
+        "audio_profile": "LC",
+        "session_timeout_seconds": 60
+      },
+      "ha_live_default": {
+        "transcode": true,
+        "container": "hls",
+        "video_codec": "h264",
+        "video_profile": "Constrained Baseline",
+        "width": 1280,
+        "height": 720,
+        "video_bitrate": "1500k",
+        "snapshot_jpeg": "1280x720, http 200"
+      },
+      "homekit_service": {
+        "mode": "accessory",
+        "hap_port": 21065,
+        "mdns_type": "_hap._tcp",
+        "category": 17,
+        "paired": false
+      }
+    }
+  ]
+}

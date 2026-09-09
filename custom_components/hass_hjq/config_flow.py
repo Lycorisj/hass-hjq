@@ -18,11 +18,16 @@ from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
 from .const import (
+    BITRATE_1500K,
+    BITRATE_2500K,
+    BITRATE_800K,
     CONF_AUDIO,
+    CONF_BITRATE,
     CONF_RECORD_SEGMENT,
     CONF_SCALE,
     CONF_TRANSCODE,
     DEFAULT_AUDIO,
+    DEFAULT_BITRATE,
     DEFAULT_RECORD_SEGMENT,
     DEFAULT_SCALE,
     DEFAULT_TRANSCODE,
@@ -43,6 +48,7 @@ STEP_USER_DATA_SCHEMA = vol.Schema(
 )
 
 SCALE_OPTIONS = [SCALE_720P, SCALE_1080P, SCALE_SOURCE]
+BITRATE_OPTIONS = [BITRATE_800K, BITRATE_1500K, BITRATE_2500K]
 
 
 async def validate_input(hass: HomeAssistant, data: dict[str, Any]) -> dict[str, Any]:
@@ -158,6 +164,10 @@ class HassHjqOptionsFlow(OptionsFlow):
                     CONF_SCALE,
                     default=options.get(CONF_SCALE, DEFAULT_SCALE),
                 ): vol.In(SCALE_OPTIONS),
+                vol.Required(
+                    CONF_BITRATE,
+                    default=options.get(CONF_BITRATE, DEFAULT_BITRATE),
+                ): vol.In(BITRATE_OPTIONS),
                 vol.Required(
                     CONF_AUDIO,
                     default=options.get(CONF_AUDIO, DEFAULT_AUDIO),

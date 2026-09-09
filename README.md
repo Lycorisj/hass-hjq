@@ -13,8 +13,9 @@
 - [x] Home Assistant `camera.record` 短片录制
 - [x] HomeKit 实时预览（需开启 H.264 转码，默认开启）
 - [ ] HomeKit Secure Video（iCloud 录像）：Home Assistant 的 HomeKit Bridge **不支持** HKSV
+- [ ] HomeKit 人脸识别 / 活动区域（依赖 HKSV）
 - [ ] 智能插座等其它设备
-- [ ] 摄像头事件 / 移动侦测上报
+- [ ] 摄像头事件 / 移动侦测上报（云端已开侦测，HA 尚未做成 `binary_sensor`）
 
 ## 安装
 
@@ -77,8 +78,11 @@ Apple 家庭 App 里的连续录像是 **HomeKit Secure Video**，依赖家庭�
 | --- | --- |
 | 转码为 H.264 | HomeKit 实时预览需要。关闭后 HA 仍可能播放 H.265，但家庭 App 通常不行 |
 | 转码分辨率 | `1280:720`（默认）、`1920:1080`、`source` |
-| 包含音频 | 转码时是否带 AAC 音频 |
-| 录像分段时长 | 持续录制每个 MP4 的秒数，默认 300 |
+| 转码码率 | `800k` / `1500k`（默认）/ `2500k` |
+| 包含音频 | 转码时是否带 AAC 音频（16 kHz / 单声道 / 64k） |
+| 录像分段时长 | 持续录制每个 MP4 的秒数，30–3600，默认 300 |
+
+编码规格、可配项、HomeKit 能力对照与实测产物见 [docs/TEST_RESULTS.md](docs/TEST_RESULTS.md)。选项是账号级，两路摄像头共用。
 
 ## 实测设备
 
@@ -88,7 +92,7 @@ Apple 家庭 App 里的连续录像是 **HomeKit Secure Video**，依赖家庭�
 | --- | --- | --- | --- |
 | 视洞 B33（`IPC_SD_B33_1`） | 合家亲共享 | HEVC 2304×1296 @ ~15fps + AAC，MPEG-TS | 无 HLS，只有带签名的 HTTP 直播地址；会话约 60 秒需保活。默认转码为 1280×720 H.264 |
 
-同一账号下两路 B33 均可：HA 实时预览、`camera.record` 短片、录制开关分段 MP4。HomeKit Bridge 能在配件模式拉起摄像头配件并广播 `_hap._tcp`；家庭 App 配对必须在与 HA **同一局域网** 的苹果设备上完成。
+同一账号下两路 B33 均可：HA 实时预览、`camera.record` 短片、录制开关分段 MP4。默认输出 **H.264 Constrained Baseline 1280×720 @ 1500k + AAC**。HomeKit Bridge 能在配件模式拉起摄像头配件并广播 `_hap._tcp`；家庭 App 配对必须在与 HA **同一局域网** 的苹果设备上完成。人脸识别、家庭 App 活动区域、HKSV 时间轴本集成不支持，分析见测试文档。
 
 ## 已知限制
 

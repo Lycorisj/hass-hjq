@@ -31,12 +31,14 @@ class H264Transcoder:
         *,
         scale: str,
         audio: bool,
+        bitrate: str = "1500k",
     ) -> None:
         """Initialize the transcoder."""
         self.hass = hass
         self.camera_id = camera_id
         self.scale = scale
         self.audio = audio
+        self.bitrate = bitrate or "1500k"
         self._proc: asyncio.subprocess.Process | None = None
         self._output_dir = Path("/tmp") / "hass_hjq" / camera_id  # noqa: S108
         self._playlist = self._output_dir / "index.m3u8"
@@ -141,11 +143,11 @@ class H264Transcoder:
                 "-bf",
                 "0",
                 "-b:v",
-                "1500k",
+                self.bitrate,
                 "-maxrate",
-                "1500k",
+                self.bitrate,
                 "-bufsize",
-                "3000k",
+                _bufsize_for(self.bitrate),
             ]
         )
         if self.audio:
@@ -305,3 +307,13 @@ class SegmentRecorder:
 def ffmpeg_available() -> bool:
     """Return True if an ffmpeg binary can be found."""
     return shutil.which("ffmpeg") is not None or shutil.which("avconv") is not None
+
+
+def _bufsize_for(bitrate: str) -> str:
+    """Use a 2x VBV buffer from a bitrate like ``1500k``."""
+    raw = bitrate.strip().lower()
+    if raw.endswith("k") and raw[:-1].isdigit():
+        return f"{int(raw[:-1]) * 2}k"
+    if raw.endswith("m") and raw[:-1].isdigit():
+        return f"{int(raw[:-1]) * 2}M"
+    return "3000k"

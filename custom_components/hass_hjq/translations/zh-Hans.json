@@ -35,6 +35,7 @@
                 "data": {
                     "transcode_h264": "转码为 H.264（HomeKit 实时预览需要）",
                     "video_scale": "转码分辨率（1280:720 / 1920:1080 / source）",
+                    "video_bitrate": "转码码率（800k / 1500k / 2500k）",
                     "support_audio": "包含音频",
                     "record_segment_seconds": "录像分段时长（秒）"
                 }
