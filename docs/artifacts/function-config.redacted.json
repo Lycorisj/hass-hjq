@@ -1,0 +1,22 @@
+{
+  "source": "camera list functionConfig from real 视洞 B33 shareType=1 devices, 2026-09-09",
+  "face_recognition_present": false,
+  "functions": [
+    {"functionId": "1", "functionName": "云台控制", "switchKey": "on", "needBuy": false, "in_ha": false, "in_homekit": false},
+    {"functionId": "3", "functionName": "音乐播放", "switchKey": "off", "needBuy": false, "in_ha": false, "in_homekit": false},
+    {"functionId": "4", "functionName": "哭声侦测", "switchKey": "off", "needBuy": false, "in_ha": false, "in_homekit": false},
+    {"functionId": "7", "functionName": "云存储", "switchKey": "on", "needBuy": true, "in_ha": false, "in_homekit": false},
+    {"functionId": "9", "functionName": "移动侦测", "switchKey": "on", "needBuy": false, "in_ha": false, "in_homekit": "needs linked_motion_sensor"},
+    {"functionId": "11", "functionName": "摄像头开关", "switchKey": "on", "needBuy": false, "in_ha": false, "in_homekit": false},
+    {"functionId": "12", "functionName": "网络设置", "switchKey": "on", "needBuy": false, "in_ha": false, "in_homekit": false},
+    {"functionId": "13", "functionName": "移动追踪", "switchKey": "on", "needBuy": false, "in_ha": false, "in_homekit": false},
+    {"functionId": "32", "functionName": "语音留言", "switchKey": "off", "needBuy": false, "in_ha": false, "in_homekit": false},
+    {"functionId": "35", "functionName": "语音短信告警", "switchKey": "on", "needBuy": true, "in_ha": false, "in_homekit": false},
+    {"functionId": "28", "functionName": "P2P视频传输", "switchKey": "off", "needBuy": false, "in_ha": false, "in_homekit": false},
+    {"functionId": "29", "functionName": "录像直存", "switchKey": "on", "needBuy": false, "in_ha": "local MP4 switch instead", "in_homekit": false},
+    {"functionId": "14", "functionName": "语音对讲", "switchKey": "on", "needBuy": false, "in_ha": false, "in_homekit": false},
+    {"functionId": "36", "functionName": "声音侦测", "switchKey": "on", "needBuy": false, "in_ha": false, "in_homekit": false},
+    {"functionId": "49", "functionName": "区域设置", "switchKey": "on", "needBuy": false, "in_ha": false, "in_homekit": "HKSV only"}
+  ],
+  "absent_from_list": ["人脸识别", "人物检测", "HomeKit Secure Video"]
+}

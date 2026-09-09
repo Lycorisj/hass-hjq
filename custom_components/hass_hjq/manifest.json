@@ -1,15 +1,15 @@
 {
     "domain": "hass_hjq",
     "name": "移动爱家（原和家亲）",
-    "codeowners": ["@XiaoMiku01"],
+    "codeowners": ["@Lycorisj"],
     "config_flow": true,
-    "dependencies": ["ffmpeg"],
-    "documentation": "https://github.com/XiaoMiku01/hass-hjq",
+    "dependencies": ["ffmpeg", "stream"],
+    "documentation": "https://github.com/Lycorisj/hass-hjq",
     "homekit": {},
     "iot_class": "cloud_polling",
-    "issue_tracker": "https://github.com/XiaoMiku01/hass-hjq/issues",
+    "issue_tracker": "https://github.com/Lycorisj/hass-hjq/issues",
     "requirements": [],
     "ssdp": [],
-    "version": "0.1.0",
+    "version": "0.2.0",
     "zeroconf": []
 }

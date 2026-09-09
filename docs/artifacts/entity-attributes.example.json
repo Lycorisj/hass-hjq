@@ -1,0 +1,24 @@
+{
+  "note": "Redacted example of camera extra_state_attributes after default options. IPs and MACs omitted.",
+  "entity_id": "camera.shi_dong_she_xiang_tou_b33_2",
+  "state": "streaming",
+  "supported_features": ["STREAM"],
+  "attributes": {
+    "h264_ready": true,
+    "recording": false,
+    "transcode_h264": true,
+    "live_container": "hls",
+    "video_codec": "h264",
+    "video_profile": "constrained_baseline",
+    "video_level": "3.1",
+    "video_resolution": "1280:720",
+    "video_bitrate": "1500k",
+    "audio_enabled": true,
+    "audio_codec": "aac",
+    "audio_rate": 16000,
+    "audio_channels": 1,
+    "audio_bitrate": "64k",
+    "record_container": "mp4",
+    "record_segment_seconds": 300
+  }
+}

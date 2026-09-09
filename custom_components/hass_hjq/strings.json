@@ -2,18 +2,57 @@
     "config": {
         "step": {
             "user": {
+                "title": "HeJiaQin login",
+                "description": "Sign in with your 移动爱家 (HeJiaQin) phone number and password.",
                 "data": {
-                    "username": "[%key:common::config_flow::data::username%]",
-                    "password": "[%key:common::config_flow::data::password%]"
+                    "username": "Phone number",
+                    "password": "Password"
+                }
+            },
+            "reauth_confirm": {
+                "title": "Reauthenticate",
+                "description": "Login expired. Enter the account password again.",
+                "data": {
+                    "password": "Password"
                 }
             }
         },
         "error": {
-            "invalid_auth": "[%key:common::config_flow::error::invalid_auth%]",
-            "unknown": "[%key:common::config_flow::error::unknown%]"
+            "invalid_auth": "Login failed. Check the phone number and password, or try again later if the account is rate-limited.",
+            "unknown": "Unexpected error",
+            "cannot_connect": "Failed to connect"
         },
         "abort": {
-            "already_configured": "[%key:common::config_flow::abort::already_configured_device%]"
+            "already_configured": "This account is already configured",
+            "reauth_successful": "Reauthentication successful"
+        }
+    },
+    "options": {
+        "step": {
+            "init": {
+                "title": "Stream and recording",
+                "description": "H.264 transcoding is required for HomeKit live view. It uses extra CPU. Recordings are stored in config/www/hass_hjq/.",
+                "data": {
+                    "transcode_h264": "Transcode to H.264 (HomeKit live view)",
+                    "video_scale": "Transcode resolution (1280:720 / 1920:1080 / source)",
+                    "video_bitrate": "Transcode bitrate (800k / 1500k / 2500k)",
+                    "support_audio": "Include audio",
+                    "record_segment_seconds": "Recording segment length (seconds)"
+                }
+            }
+        }
+    },
+    "entity": {
+        "switch": {
+            "recording": {
+                "name": "Recording"
+            }
+        }
+    },
+    "services": {
+        "refresh_stream": {
+            "name": "Refresh live stream",
+            "description": "Fetch a new cloud live address and restart H.264 transcoding if enabled."
         }
     }
 }

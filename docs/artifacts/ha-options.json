@@ -1,0 +1,56 @@
+{
+  "account_level": true,
+  "per_camera_override": false,
+  "reload_required": true,
+  "options": {
+    "transcode_h264": {
+      "type": "bool",
+      "default": true,
+      "configurable": true,
+      "applies_to": ["ha_live", "ha_record", "homekit_live"]
+    },
+    "video_scale": {
+      "type": "enum",
+      "choices": ["1280:720", "1920:1080", "source"],
+      "default": "1280:720",
+      "configurable": true
+    },
+    "video_bitrate": {
+      "type": "enum",
+      "choices": ["800k", "1500k", "2500k"],
+      "default": "1500k",
+      "configurable": true,
+      "vbv_bufsize": "2x bitrate"
+    },
+    "support_audio": {
+      "type": "bool",
+      "default": true,
+      "configurable": true,
+      "fixed_when_on": {
+        "codec": "aac",
+        "rate": 16000,
+        "channels": 1,
+        "bitrate": "64k"
+      }
+    },
+    "record_segment_seconds": {
+      "type": "int",
+      "min": 30,
+      "max": 3600,
+      "default": 300,
+      "configurable": true,
+      "applies_to": ["switch.*_recording"]
+    }
+  },
+  "not_configurable": [
+    "h264_profile=constrained_baseline",
+    "h264_level=3.1",
+    "gop=30",
+    "bframes=0",
+    "preset=ultrafast",
+    "tune=zerolatency",
+    "hls_time=1s",
+    "hls_list_size=5",
+    "record_directory=config/www/hass_hjq"
+  ]
+}
