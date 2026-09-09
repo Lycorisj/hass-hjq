@@ -12,7 +12,15 @@ from homeassistant.exceptions import ConfigEntryAuthFailed
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .const import DOMAIN
-from .hjqapi import HJQApi, HJQApiError, HJQAuthError
+from .hjqapi import (
+    HJQApi,
+    HJQApiError,
+    HJQAuthError,
+    _BASE_URL_KEYS,
+    _JWT_KEYS,
+    _MAC_KEYS,
+    _NAME_KEYS,
+)
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -48,18 +56,22 @@ class HassHjqCoordinator(DataUpdateCoordinator[dict[str, dict[str, Any]]]):
 
         result: dict[str, dict[str, Any]] = {}
         for camera in cameras:
-            mac_id = camera.get("mac_id") or camera.get("macId")
+            mac_id = HJQApi._nested_str(camera, _MAC_KEYS)
             if not mac_id:
                 continue
             camera["mac_id"] = mac_id
-            camera["mac_name"] = (
-                camera.get("mac_name")
-                or camera.get("macName")
-                or camera.get("name")
-                or mac_id
-            )
-            camera["baseUrl"] = camera.get("baseUrl") or camera.get("base_url") or ""
-            camera["jwtoken"] = camera.get("jwtoken") or camera.get("jwToken") or ""
+            camera["mac_name"] = HJQApi._nested_str(camera, _NAME_KEYS) or mac_id
+            camera["baseUrl"] = HJQApi._nested_str(camera, _BASE_URL_KEYS)
+            camera["jwtoken"] = HJQApi._nested_str(camera, _JWT_KEYS)
+            if not camera["baseUrl"] or not camera["jwtoken"]:
+                _LOGGER.warning(
+                    "Camera %s (%s) missing live fields; keys=%s has_baseUrl=%s has_jwtoken=%s",
+                    camera["mac_name"],
+                    mac_id,
+                    sorted(camera.keys()),
+                    bool(camera["baseUrl"]),
+                    bool(camera["jwtoken"]),
+                )
             result[str(mac_id)] = camera
         if not result:
             _LOGGER.warning("No cameras returned for this account")

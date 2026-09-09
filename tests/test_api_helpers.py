@@ -93,6 +93,33 @@ class SignTest(unittest.TestCase):
         self.assertEqual(len(first), 32)
 
 
+class ExtractCameraListTest(unittest.TestCase):
+    def test_prefers_list_with_live_fields(self) -> None:
+        data = {
+            "list": [{"mac_id": "a", "mac_name": "cam-a"}],
+            "bindList": [
+                {
+                    "mac_id": "b",
+                    "mac_name": "cam-b",
+                    "baseUrl": "https://dcs.example",
+                    "jwtoken": "tok",
+                }
+            ],
+        }
+        cameras = HJQApi._extract_camera_list(data)
+        self.assertEqual(len(cameras), 1)
+        self.assertEqual(cameras[0]["mac_id"], "b")
+
+    def test_nested_live_fields(self) -> None:
+        camera = {
+            "macId": "x",
+            "macName": "cam",
+            "device": {"baseUrl": "https://dcs.example", "jwToken": "tok"},
+        }
+        self.assertEqual(HJQApi._nested_str(camera, hjqapi._BASE_URL_KEYS), "https://dcs.example")
+        self.assertEqual(HJQApi._nested_str(camera, hjqapi._JWT_KEYS), "tok")
+
+
 class BufsizeTest(unittest.TestCase):
     def test_bufsize_is_twice_bitrate(self) -> None:
         self.assertEqual(ffmpeg_tools._bufsize_for("800k"), "1600k")

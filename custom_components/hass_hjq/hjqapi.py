@@ -19,6 +19,26 @@ LOGIN_URL = "https://base.hjq.komect.com/base/user/passwdLogin"
 VIDEO_LOGIN_URL = "https://video.komect.com/user/login/loginByHJQToken"
 CAMERA_LIST_URL = "https://video.komect.com/camera/core/api/bind/queryList"
 
+_BASE_URL_KEYS = (
+    "baseUrl",
+    "base_url",
+    "baseURL",
+    "dcsUrl",
+    "dcs_url",
+    "serverUrl",
+    "server_url",
+)
+_JWT_KEYS = (
+    "jwtoken",
+    "jwToken",
+    "jwt",
+    "jw_token",
+    "AuthorizationJwtoken",
+    "authorizationJwtoken",
+)
+_MAC_KEYS = ("mac_id", "macId", "macid")
+_NAME_KEYS = ("mac_name", "macName", "name", "deviceName", "device_name")
+
 TOKEN_EXPIRED_MARKERS = (
     "USER_TOKEN_OUTOFDATE",
     "TOKEN_OUTOFDATE",
@@ -173,17 +193,79 @@ class HJQApi:
             "user_id": self.tel,
         }
         payload = await self._signed_get(CAMERA_LIST_URL, params)
-        data = payload.get("data")
-        if data is None:
-            return []
-        if isinstance(data, dict):
-            for key in ("list", "records", "cameras", "bindList"):
-                if isinstance(data.get(key), list):
-                    return data[key]
-            return []
+        cameras = self._extract_camera_list(payload.get("data"))
+        _LOGGER.debug(
+            "queryList returned %s camera dicts",
+            len(cameras),
+        )
+        return cameras
+
+    @staticmethod
+    def _extract_camera_list(data: Any) -> list[dict[str, Any]]:
+        """Pick the camera array out of queryList's variously shaped payloads."""
         if isinstance(data, list):
-            return data
-        return []
+            return [item for item in data if isinstance(item, dict)]
+        if not isinstance(data, dict):
+            return []
+
+        preferred_keys = (
+            "bindList",
+            "cameras",
+            "records",
+            "shareList",
+            "sharedList",
+            "list",
+        )
+        candidates: list[list[dict[str, Any]]] = []
+        for key in preferred_keys:
+            value = data.get(key)
+            if isinstance(value, list) and value and isinstance(value[0], dict):
+                candidates.append(value)
+        for value in data.values():
+            if (
+                isinstance(value, list)
+                and value
+                and isinstance(value[0], dict)
+                and value not in candidates
+            ):
+                candidates.append(value)
+
+        def _score(items: list[dict[str, Any]]) -> int:
+            score = 0
+            for item in items:
+                if item.get("mac_id") or item.get("macId"):
+                    score += 1
+                if HJQApi._nested_str(item, _BASE_URL_KEYS):
+                    score += 5
+                if HJQApi._nested_str(item, _JWT_KEYS):
+                    score += 5
+            return score
+
+        if candidates:
+            candidates.sort(key=_score, reverse=True)
+            return [item for item in candidates[0] if isinstance(item, dict)]
+        # Some payloads are {macId: {camera fields}, ...}.
+        nested = [v for v in data.values() if isinstance(v, dict)]
+        return [item for item in nested if item.get("mac_id") or item.get("macId")]
+
+    @staticmethod
+    def _nested_str(obj: Any, keys: tuple[str, ...]) -> str:
+        """Return the first non-empty string for keys, including nested dicts."""
+        if isinstance(obj, dict):
+            for key in keys:
+                value = obj.get(key)
+                if isinstance(value, str) and value.strip():
+                    return value.strip()
+            for value in obj.values():
+                found = HJQApi._nested_str(value, keys)
+                if found:
+                    return found
+        elif isinstance(obj, list):
+            for item in obj:
+                found = HJQApi._nested_str(item, keys)
+                if found:
+                    return found
+        return ""
 
     async def get_live_addr(
         self, base_url: str, jwt: str, mac_id: str
