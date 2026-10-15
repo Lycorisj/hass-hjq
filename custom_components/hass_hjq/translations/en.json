@@ -37,7 +37,8 @@
                     "video_scale": "Transcode resolution (1280:720 / 1920:1080 / source)",
                     "video_bitrate": "Transcode bitrate (800k / 1500k / 2500k)",
                     "support_audio": "Include audio",
-                    "record_segment_seconds": "Recording segment length (seconds)"
+                    "record_segment_seconds": "Recording segment length (seconds)",
+                    "homekit_secure": "Home app iCloud recording, faces, zones, and intercom"
                 }
             }
         }

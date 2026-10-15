@@ -37,7 +37,8 @@
                     "video_scale": "转码分辨率（1280:720 / 1920:1080 / source）",
                     "video_bitrate": "转码码率（800k / 1500k / 2500k）",
                     "support_audio": "包含音频",
-                    "record_segment_seconds": "录像分段时长（秒）"
+                    "record_segment_seconds": "录像分段时长（秒）",
+                    "homekit_secure": "家庭 App 的 iCloud 录像、人脸、活动区域和对讲"
                 }
             }
         }

@@ -10,6 +10,6 @@
     "issue_tracker": "https://github.com/Lycorisj/hass-hjq/issues",
     "requirements": [],
     "ssdp": [],
-    "version": "0.3.0",
+    "version": "0.4.0",
     "zeroconf": []
 }

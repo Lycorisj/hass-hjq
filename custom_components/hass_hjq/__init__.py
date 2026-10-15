@@ -95,6 +95,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Unload a config entry."""
+    from .homekit_bridge import async_stop_homekit_bridge
+
+    await async_stop_homekit_bridge(hass, entry.entry_id)
     stored = hass.data[DOMAIN].get(entry.entry_id) or {}
     workers: dict[str, CameraWorker] = stored.get("workers") or {}
     for worker in workers.values():

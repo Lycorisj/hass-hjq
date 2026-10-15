@@ -1,0 +1,2 @@
+go2rtc dev 6361dcb3f936516b815634beee22e9d6242cfbe3
+HomeKit Secure Video, motion API, speaker

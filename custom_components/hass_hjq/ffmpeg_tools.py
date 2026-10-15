@@ -83,6 +83,11 @@ class H264Transcoder:
             return "stalled"
         return "live"
 
+    async def prepare(self) -> str:
+        """Open the local stream server and return its URL."""
+        async with self._lock:
+            return await self._server.start()
+
     async def ensure(self, source: str, *, restart: bool = False) -> str:
         """Start (or keep) transcoding and return the local stream URL."""
         async with self._lock:

@@ -202,6 +202,14 @@ class CameraWorker:
                 "%s: ffmpeg not found, HomeKit H.264 transcode is disabled",
                 self.name,
             )
+        if self.transcode:
+            try:
+                await self.transcoder.prepare()
+            except OSError:
+                _LOGGER.warning("%s: local stream server did not start", self.name)
+        from .homekit_bridge import async_schedule_homekit_bridge
+
+        async_schedule_homekit_bridge(self.hass, self.entry.entry_id)
         if self._keep_task is None or self._keep_task.done():
             self._keep_task = self.hass.async_create_background_task(
                 self._keep_loop(),

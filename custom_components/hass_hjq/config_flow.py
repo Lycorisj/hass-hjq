@@ -23,11 +23,13 @@ from .const import (
     BITRATE_800K,
     CONF_AUDIO,
     CONF_BITRATE,
+    CONF_HOMEKIT_SECURE,
     CONF_RECORD_SEGMENT,
     CONF_SCALE,
     CONF_TRANSCODE,
     DEFAULT_AUDIO,
     DEFAULT_BITRATE,
+    DEFAULT_HOMEKIT_SECURE,
     DEFAULT_RECORD_SEGMENT,
     DEFAULT_SCALE,
     DEFAULT_TRANSCODE,
@@ -176,6 +178,10 @@ class HassHjqOptionsFlow(OptionsFlow):
                     CONF_RECORD_SEGMENT,
                     default=options.get(CONF_RECORD_SEGMENT, DEFAULT_RECORD_SEGMENT),
                 ): vol.All(vol.Coerce(int), vol.Range(min=30, max=3600)),
+                vol.Required(
+                    CONF_HOMEKIT_SECURE,
+                    default=options.get(CONF_HOMEKIT_SECURE, DEFAULT_HOMEKIT_SECURE),
+                ): bool,
             }
         )
         return self.async_show_form(step_id="init", data_schema=schema)
