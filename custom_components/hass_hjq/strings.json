@@ -47,6 +47,11 @@
             "recording": {
                 "name": "Recording"
             }
+        },
+        "binary_sensor": {
+            "motion": {
+                "name": "Motion"
+            }
         }
     },
     "services": {

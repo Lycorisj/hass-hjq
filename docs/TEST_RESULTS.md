@@ -63,8 +63,8 @@ App 侧 `functionConfig`（完整表见 [artifacts/function-config.redacted.json
 
 | 项目 | 实测结果 | 可配？ | 怎么配 |
 | --- | --- | --- | --- |
-| 容器 | HLS（1s 分片，窗口 5 片） | 否 | 写死为低延迟预览 |
-| 视频编码 | H.264 Constrained Baseline 3.1，无 B 帧，GOP 30 | 否（为兼容 HomeKit） | 写死 `libx264 ultrafast + zerolatency + baseline` |
+| 容器 | 本地 HTTP MPEG-TS（连续流，不再用 5 片 HLS） | 否 | 家庭 App 读 HLS 会变成几秒一帧 |
+| 视频编码 | H.264 Constrained Baseline 3.1，无 B 帧，GOP 15（约 1 秒一个关键帧） | 否（为兼容 HomeKit） | 写死 `libx264 ultrafast + zerolatency + baseline` |
 | 分辨率 | **1280×720**（源 2304×1296 缩小） | **是** | 集成选项「转码分辨率」：`1280:720` / `1920:1080` / `source` |
 | 视频码率 | **1500k**（VBV maxrate=码率，bufsize=2×） | **是** | 集成选项「转码码率」：`800k` / `1500k` / `2500k` |
 | 帧率 | 跟随源，约 15–16fps，不升帧 | 否 | 源就是 ~15fps；HomeKit 侧可用 `max_fps` 再限 |

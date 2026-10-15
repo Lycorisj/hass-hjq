@@ -56,6 +56,16 @@ class HeJiaQinRecordSwitch(CoordinatorEntity[HassHjqCoordinator], SwitchEntity):
         """Return true if recording is active."""
         return self.worker.recording
 
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        """Show where MP4 files actually are."""
+        return self.worker.recording_info()
+
+    async def async_added_to_hass(self) -> None:
+        """Refresh when a recording starts or stops."""
+        await super().async_added_to_hass()
+        self.async_on_remove(self.worker.listen(self.async_write_ha_state))
+
     async def async_turn_on(self, **kwargs: Any) -> None:
         """Start recording."""
         try:

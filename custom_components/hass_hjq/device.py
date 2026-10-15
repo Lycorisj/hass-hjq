@@ -3,14 +3,18 @@
 from __future__ import annotations
 
 import asyncio
+from collections.abc import Callable
 from datetime import datetime, timedelta
 import logging
+import time
 from typing import Any
 
-import aiohttp
+from homeassistant.components.persistent_notification import (
+    async_create as notify,
+    async_dismiss,
+)
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
 from .const import (
     CONF_AUDIO,
@@ -36,10 +40,20 @@ from .const import (
     STREAM_STALE_SECONDS,
 )
 from .coordinator import HassHjqCoordinator
-from .ffmpeg_tools import H264Transcoder, SegmentRecorder, ffmpeg_available
+from .ffmpeg_tools import (
+    H264Transcoder,
+    SegmentRecorder,
+    ffmpeg_available,
+    recent_recordings,
+    recording_location,
+)
 from .hjqapi import HJQApiError, HJQAuthError
+from .stream_broker import MotionDetector, recovery_action
 
 _LOGGER = logging.getLogger(__name__)
+
+_MOTION_HOLD_SECONDS = 20.0
+_SNAPSHOT_MAX_AGE = 8.0
 
 
 class CameraWorker:
@@ -66,6 +80,16 @@ class CameraWorker:
         self._cloud_url_at: datetime | None = None
         self._stop = False
         self._keep_task: asyncio.Task | None = None
+        self._listeners: set[Callable[[], None]] = set()
+        self._stream_status = "starting"
+        self._status_since = time.monotonic()
+        self._failures = 0
+        self._next_recover_at = 0.0
+        self._live_since = 0.0
+        self._motion_at = 0.0
+        self._motion: MotionDetector | None = None
+        self._snapshot: bytes | None = None
+        self._snapshot_at = 0.0
         self.transcoder = H264Transcoder(
             hass,
             self.mac_id,
@@ -74,6 +98,33 @@ class CameraWorker:
             bitrate=entry.options.get(CONF_BITRATE, DEFAULT_BITRATE),
         )
         self.recorder = SegmentRecorder(hass, self.mac_id, self.name)
+
+    def listen(self, callback: Callable[[], None]) -> Callable[[], None]:
+        """Register a callback fired when stream or motion state changes."""
+        self._listeners.add(callback)
+
+        def _unsub() -> None:
+            self._listeners.discard(callback)
+
+        return _unsub
+
+    def push(self) -> None:
+        """Tell entities to refresh their state."""
+        for callback in list(self._listeners):
+            callback()
+
+    @property
+    def stream_status(self) -> str:
+        """Return starting, live, or reconnecting."""
+        return self._stream_status
+
+    @property
+    def motion_is_on(self) -> bool:
+        """Return true for a short hold after the last detected motion."""
+        return (
+            self._motion_at > 0
+            and time.monotonic() - self._motion_at < _MOTION_HOLD_SECONDS
+        )
 
     @property
     def transcode(self) -> bool:
@@ -86,6 +137,12 @@ class CameraWorker:
     def recording(self) -> bool:
         """Return whether local recording is active."""
         return self.recorder.recording
+
+    def recording_info(self) -> dict[str, Any]:
+        """Return the folder, browser path, and newest files."""
+        info = recording_location(self.hass)
+        info["latest_recordings"] = recent_recordings(info["recording_directory"])
+        return info
 
     def output_specs(self) -> dict[str, Any]:
         """Return the configured live/record encode specs for HA and HomeKit."""
@@ -109,6 +166,7 @@ class CameraWorker:
             "record_segment_seconds": int(
                 self.entry.options.get(CONF_RECORD_SEGMENT, DEFAULT_RECORD_SEGMENT)
             ),
+            "stream_status": self._stream_status,
         }
 
     @property
@@ -122,8 +180,22 @@ class CameraWorker:
             self.camera = latest
         return self.camera
 
+    def _set_status(self, status: str) -> None:
+        if status == self._stream_status:
+            return
+        self._stream_status = status
+        self._status_since = time.monotonic()
+        if status != "live":
+            self._snapshot = None
+            self._snapshot_at = 0.0
+        self.push()
+
+    def _on_motion(self) -> None:
+        self._motion_at = time.monotonic()
+        self.push()
+
     async def async_start(self) -> None:
-        """Start the keep-alive loop."""
+        """Start the keep-alive loop and the local transcoder."""
         self._stop = False
         if self.entry.options.get(CONF_TRANSCODE, DEFAULT_TRANSCODE) and not ffmpeg_available():
             _LOGGER.warning(
@@ -141,25 +213,27 @@ class CameraWorker:
         self._stop = True
         if self._keep_task and not self._keep_task.done():
             self._keep_task.cancel()
+        if self._motion is not None:
+            await self._motion.stop()
         await self.recorder.stop()
         await self.transcoder.stop()
+        async_dismiss(self.hass, f"hass_hjq_offline_{self.mac_id}")
 
     async def async_stream_source(self, *, force: bool = False) -> str | None:
-        """Return a playable URL or local H.264 playlist path."""
+        """Return a playable local H.264 URL, or the cloud URL if transcode is off."""
+        if self.transcode and self._stream_status == "reconnecting" and not force:
+            return None
         cloud = await self.async_cloud_url(force=force)
         if not cloud:
             return None
         if not self.transcode:
             return cloud
         try:
-            return await self.transcoder.ensure(cloud)
+            return await self.transcoder.ensure(cloud, restart=force)
         except (TimeoutError, OSError, RuntimeError) as err:
-            _LOGGER.warning(
-                "%s H.264 transcode failed (%s); falling back to cloud URL",
-                self.name,
-                err,
-            )
-            return cloud
+            _LOGGER.warning("%s H.264 transcode failed: %s", self.name, err)
+            self._set_status("reconnecting")
+            return None
 
     async def async_cloud_url(self, *, force: bool = False) -> str | None:
         """Return a fresh-enough cloud live URL."""
@@ -174,6 +248,19 @@ class CameraWorker:
                 await self._refresh_cloud_url()
             return self._cloud_url
 
+    async def async_snapshot(self) -> bytes | None:
+        """Return a recent JPEG, or nothing while the stream is down.
+
+        A stale JPEG is what made the Home app keep the frame from the moment
+        the phone app took the account.
+        """
+        if self._stream_status != "live":
+            return None
+        if self._snapshot and time.monotonic() - self._snapshot_at < _SNAPSHOT_MAX_AGE:
+            return self._snapshot
+        await self._refresh_snapshot()
+        return self._snapshot
+
     async def async_start_recording(self) -> None:
         """Start rolling MP4 recording."""
         source = await self.async_stream_source()
@@ -183,11 +270,25 @@ class CameraWorker:
             self.entry.options.get(CONF_RECORD_SEGMENT, DEFAULT_RECORD_SEGMENT)
         )
         audio = bool(self.entry.options.get(CONF_AUDIO, DEFAULT_AUDIO))
-        await self.recorder.start(source, segment, audio=audio)
+        directory = await self.recorder.start(source, segment, audio=audio)
+        info = self.recording_info()
+        notify(
+            self.hass,
+            (
+                f"{self.name} 正在录像。\n"
+                f"浏览器打开：{info['recording_browser_path']}\n"
+                f"容器内目录：{directory}\n"
+                f"{info['recording_host_hint']}"
+            ),
+            title="摄像头录像位置",
+            notification_id=f"hass_hjq_record_{self.mac_id}",
+        )
+        self.push()
 
     async def async_stop_recording(self) -> None:
         """Stop rolling MP4 recording."""
         await self.recorder.stop()
+        self.push()
 
     async def _refresh_cloud_url(self) -> None:
         meta = self._meta()
@@ -213,40 +314,138 @@ class CameraWorker:
             await self.transcoder.restart_if_running(url)
 
     async def _keep_loop(self) -> None:
-        await asyncio.sleep(3)
+        await asyncio.sleep(1)
         _LOGGER.info("%s keep-alive started", self.name)
-        session = async_get_clientsession(self.hass)
         ticks = 0
         while not self._stop:
             try:
-                meta = self._meta()
                 ticks += 1
-                if self._cloud_url is None:
-                    async with self._lock:
-                        await self._refresh_cloud_url()
-                elif ticks % 3 == 0 and not await self._url_ok(session, self._cloud_url):
-                    _LOGGER.warning("%s live URL invalid, refreshing", self.name)
-                    async with self._lock:
-                        await self._refresh_cloud_url()
-                if meta.get("baseUrl") and meta.get("jwtoken"):
-                    await self.api.keep_live_addr(
-                        meta["baseUrl"], meta["jwtoken"], self.mac_id
-                    )
+                await self._watch_stream(ticks)
             except asyncio.CancelledError:
                 raise
             except Exception:  # noqa: BLE001
                 _LOGGER.exception("%s keep-alive iteration failed", self.name)
-            await asyncio.sleep(KEEPALIVE_INTERVAL)
+            await asyncio.sleep(5)
 
-    async def _url_ok(self, session: aiohttp.ClientSession, url: str) -> bool:
-        if not url.startswith("http"):
-            return True
-        timeout = aiohttp.ClientTimeout(total=5)
+    async def _watch_stream(self, ticks: int) -> None:
+        if not self.transcode:
+            if self._cloud_url is None:
+                async with self._lock:
+                    await self._refresh_cloud_url()
+            self._set_status("live" if self._cloud_url else "reconnecting")
+            return
+
+        health = self.transcoder.health()
+        if health == "live":
+            if self._stream_status != "live":
+                self._set_status("live")
+                self._live_since = time.monotonic()
+                async_dismiss(self.hass, f"hass_hjq_offline_{self.mac_id}")
+                _LOGGER.info("%s stream recovered", self.name)
+            elif time.monotonic() - self._live_since > 15:
+                self._failures = 0
+            await self._ensure_motion()
+            if ticks % 4 == 0:
+                await self._keepalive()
+            if ticks % 2 == 0:
+                await self._refresh_snapshot()
+            return
+
+        if health == "starting":
+            self._set_status("starting")
+            if not self.transcoder.running:
+                await self.async_stream_source()
+            if self.transcoder.running or time.monotonic() - self._status_since < 20:
+                return
+
+        now = time.monotonic()
+        if now < self._next_recover_at:
+            self._set_status("reconnecting")
+            return
+        self._failures += 1
+        self._next_recover_at = now + min(60, 5 * self._failures)
+        await self._recover()
+
+    async def _recover(self) -> None:
+        action = recovery_action(self._failures)
+        self._set_status("reconnecting")
+        notify(
+            self.hass,
+            (
+                f"{self.name} 掉线了，多半是手机上的移动爱家抢走了登录。"
+                "正在重新登录并拉流，恢复前预览不会停在旧画面。"
+            ),
+            title="摄像头正在重新连接",
+            notification_id=f"hass_hjq_offline_{self.mac_id}",
+        )
+        _LOGGER.warning("%s stream stalled, recovery=%s", self.name, action)
+        if action == "reauth":
+            try:
+                await self.api.ensure_auth(force=True)
+                await self.coordinator.async_request_refresh()
+            except (HJQApiError, HJQAuthError) as err:
+                _LOGGER.warning("%s re-login failed: %s", self.name, err)
+                return
+        async with self._lock:
+            self._cloud_url = None
+            await self._refresh_cloud_url()
+        if not self._cloud_url:
+            return
         try:
-            async with session.get(url, timeout=timeout) as resp:
-                if resp.status >= 400:
-                    return False
-                await resp.content.read(256)
-                return True
-        except (TimeoutError, aiohttp.ClientError):
-            return False
+            await self.transcoder.ensure(self._cloud_url, restart=True)
+        except (TimeoutError, OSError, RuntimeError) as err:
+            _LOGGER.warning("%s restart after stall failed: %s", self.name, err)
+
+    async def _keepalive(self) -> None:
+        meta = self._meta()
+        if meta.get("baseUrl") and meta.get("jwtoken"):
+            kept = await self.api.keep_live_addr(
+                meta["baseUrl"], meta["jwtoken"], self.mac_id
+            )
+            if not kept:
+                self._failures = max(self._failures, 1)
+                self._next_recover_at = 0
+
+    async def _ensure_motion(self) -> None:
+        url = self.transcoder.stream_url
+        if not url or self._motion is not None:
+            return
+        self._motion = MotionDetector(url, self._on_motion)
+        self._motion.start()
+
+    async def _refresh_snapshot(self) -> None:
+        url = self.transcoder.stream_url
+        if not url or self.transcoder.health() != "live":
+            return
+        proc = await asyncio.create_subprocess_exec(
+            "ffmpeg",
+            "-hide_banner",
+            "-loglevel",
+            "error",
+            "-probesize",
+            "32768",
+            "-analyzeduration",
+            "0",
+            "-fflags",
+            "nobuffer",
+            "-i",
+            url,
+            "-frames:v",
+            "1",
+            "-f",
+            "image2pipe",
+            "-vcodec",
+            "mjpeg",
+            "pipe:1",
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.DEVNULL,
+        )
+        try:
+            data, _ = await asyncio.wait_for(proc.communicate(), timeout=4)
+        except TimeoutError:
+            proc.kill()
+            await proc.wait()
+            return
+        if data and data.startswith(b"\xff\xd8"):
+            self._snapshot = data
+            self._snapshot_at = time.monotonic()

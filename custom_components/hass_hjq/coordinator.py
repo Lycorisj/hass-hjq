@@ -8,7 +8,6 @@ from typing import Any
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ConfigEntryAuthFailed
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .const import DOMAIN
@@ -42,7 +41,10 @@ class HassHjqCoordinator(DataUpdateCoordinator[dict[str, dict[str, Any]]]):
             await self.api.ensure_auth()
             cameras = await self.api.get_camera_info()
         except HJQAuthError as err:
-            raise ConfigEntryAuthFailed(str(err)) from err
+            # The phone app kicks this session. Retry with the saved password
+            # instead of stopping the integration until someone re-enters it.
+            _LOGGER.warning("Camera list auth failed, will log in again: %s", err)
+            raise UpdateFailed(str(err)) from err
         except HJQApiError as err:
             raise UpdateFailed(str(err)) from err
 

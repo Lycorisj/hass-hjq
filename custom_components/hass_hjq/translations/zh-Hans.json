@@ -47,6 +47,11 @@
             "recording": {
                 "name": "录制"
             }
+        },
+        "binary_sensor": {
+            "motion": {
+                "name": "移动侦测"
+            }
         }
     },
     "services": {

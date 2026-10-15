@@ -21,6 +21,7 @@ def _stub_homeassistant() -> None:
     class _Platform:
         CAMERA = "camera"
         SWITCH = "switch"
+        BINARY_SENSOR = "binary_sensor"
 
     const_mod.Platform = _Platform
     homeassistant.const = const_mod

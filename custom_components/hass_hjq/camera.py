@@ -50,7 +50,6 @@ class HeJiaQinCamera(CoordinatorEntity[HassHjqCoordinator], Camera):
 
     _attr_has_entity_name = True
     _attr_name = None
-    _attr_is_streaming = True
     _attr_supported_features = CameraEntityFeature.STREAM
 
     def __init__(
@@ -79,6 +78,11 @@ class HeJiaQinCamera(CoordinatorEntity[HassHjqCoordinator], Camera):
         return True
 
     @property
+    def is_streaming(self) -> bool:
+        """Return true only while frames are actually arriving."""
+        return self.worker.stream_status == "live"
+
+    @property
     def is_recording(self) -> bool:
         """Return true if the camera is recording locally."""
         return self.worker.recording
@@ -94,11 +98,13 @@ class HeJiaQinCamera(CoordinatorEntity[HassHjqCoordinator], Camera):
             "recording": self.worker.recording,
         }
         attrs.update(self.worker.output_specs())
+        attrs.update(self.worker.recording_info())
         return attrs
 
     async def async_added_to_hass(self) -> None:
         """Start keep-alive when the entity is added."""
         await super().async_added_to_hass()
+        self.async_on_remove(self.worker.listen(self.async_write_ha_state))
         await self.worker.async_start()
 
     async def async_will_remove_from_hass(self) -> None:
@@ -129,6 +135,11 @@ class HeJiaQinCamera(CoordinatorEntity[HassHjqCoordinator], Camera):
         self, width: int | None = None, height: int | None = None
     ) -> bytes | None:
         """Return a still JPEG from the live source."""
+        if self.worker.stream_status != "live":
+            return None
+        cached = await self.worker.async_snapshot()
+        if cached and width is None and height is None:
+            return cached
         source = await self.worker.async_stream_source()
         if not source:
             return None
@@ -143,13 +154,13 @@ class HeJiaQinCamera(CoordinatorEntity[HassHjqCoordinator], Camera):
             )
         except Exception:  # noqa: BLE001
             _LOGGER.debug("Still image failed for %s", self.worker.name, exc_info=True)
-            return None
+            return cached
 
     async def async_refresh_stream(self) -> None:
         """Service: force a new live address and restart transcoding."""
         await self.worker.async_stream_source(force=True)
-        if self.stream and self.worker.transcode:
-            self.stream.update_source(self.worker.transcoder.playlist_path)
+        if self.stream and self.worker.transcode and self.worker.transcoder.stream_url:
+            self.stream.update_source(self.worker.transcoder.stream_url)
         elif self.stream:
             cloud = await self.worker.async_cloud_url()
             if cloud:

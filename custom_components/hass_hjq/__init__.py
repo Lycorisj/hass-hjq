@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 
+from homeassistant.components.persistent_notification import async_create as notify
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_PASSWORD, CONF_USERNAME
 from homeassistant.core import HomeAssistant
@@ -14,6 +15,7 @@ import homeassistant.helpers.config_validation as cv
 from .const import DOMAIN, PLATFORMS
 from .coordinator import HassHjqCoordinator
 from .device import CameraWorker
+from .ffmpeg_tools import recording_location
 from .hjqapi import HJQApi, HJQApiError, HJQAuthError
 
 _LOGGER = logging.getLogger(__name__)
@@ -74,6 +76,19 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     }
 
     entry.async_on_unload(entry.add_update_listener(_async_reload_on_update))
+    place = recording_location(hass)
+    notify(
+        hass,
+        (
+            "录像在容器内这个文件夹：\n"
+            f"{place['recording_directory']}\n\n"
+            f"用浏览器打开 {place['recording_browser_path']} 。"
+            "先打开摄像头的「录制」开关，MP4 才会出现。\n"
+            f"{place['recording_host_hint']}"
+        ),
+        title="摄像头录像位置",
+        notification_id=f"hass_hjq_record_path_{entry.entry_id}",
+    )
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     return True
 

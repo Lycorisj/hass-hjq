@@ -34,11 +34,9 @@ HACS 用户可将本仓库添加为自定义存储库（类别：Integration）�
 
 ### 持续录制
 
-打开对应摄像头的 **录制** 开关。录像按选项里的分段时长写成 MP4，默认目录：
+打开对应摄像头的 **录制** 开关。录像按选项里的分段时长写成 MP4。
 
-`/config/www/hass_hjq/`
-
-可通过 `https://你的HA/local/hass_hjq/` 下载。建议同时在「媒体」中查看该目录。
+文件在 Home Assistant **容器里面**的 `/config/www/hass_hjq/`。浏览器直接打开 `http://你的HA地址/local/hass_hjq/`。Docker 宿主机上，到你挂载为容器 `/config` 的那个目录，再进 `www/hass_hjq`。集成加载后也会在通知里写一遍这个路径；录制开关的属性里有同样的目录和最新文件名。
 
 ### 按需短片
 
@@ -60,7 +58,9 @@ data:
 5. 若已开启本集成的 H.264 转码，在 HomeKit 选项里把这些摄像头勾选为 **原生 H.264**（`video_codec: copy`），避免二次转码。
 6. 用家庭 App 扫描配对码。点开摄像头应能看到实时画面。
 
-不要把未转码的 H.265 云端流勾成「原生 H.264」，否则家庭 App 会一直转圈。
+不要把未转码的 H.265 云端流勾成「原生 H.264」，否则家庭 App 会一直转圈。直播走本地连续的 H.264，不再经过一小段 HLS。每台摄像头还有一个「移动侦测」实体，加进 HomeKit Bridge 后家庭 App 里会多一个动作传感器。
+
+iCloud 安防录像、人脸、活动区域、对讲仍然不在 HomeKit Bridge 里。这四项只有苹果的 HomeKit Secure Video 才有，HA 的 Bridge 提供不了。
 
 ### 关于 HomeKit「录制」
 

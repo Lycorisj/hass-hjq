@@ -5,7 +5,7 @@ from __future__ import annotations
 from homeassistant.const import Platform
 
 DOMAIN = "hass_hjq"
-PLATFORMS = [Platform.CAMERA, Platform.SWITCH]
+PLATFORMS = [Platform.CAMERA, Platform.SWITCH, Platform.BINARY_SENSOR]
 
 MANUFACTURER = "移动爱家"
 
@@ -37,7 +37,7 @@ OUTPUT_AUDIO_CODEC = "aac"
 OUTPUT_AUDIO_RATE = 16000
 OUTPUT_AUDIO_CHANNELS = 1
 OUTPUT_AUDIO_BITRATE = "64k"
-OUTPUT_CONTAINER_LIVE = "hls"
+OUTPUT_CONTAINER_LIVE = "mpegts"
 OUTPUT_CONTAINER_RECORD = "mp4"
 
 KEEPALIVE_INTERVAL = 20
